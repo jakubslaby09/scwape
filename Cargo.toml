@@ -4,7 +4,11 @@ version = "1.0.0"
 edition = "2021"
 
 [dependencies]
+clap = { version = "4.5.23", features = ["derive"] }
+cssparser = { version = "0.34.0", features = ["serde"] }
 html2md = "0.2.14"
 reqwest = "0.12.9"
-scraper = "0.22.0"
+scraper = { git = "https://github.com/jakubslaby09/scraper.git", features = ["serde"], rev = "6c64fb9" }
+serde = { version = "1.0.216", features = ["derive"] }
 tokio = { version = "1.42.0", features = ["macros", "fs", "rt-multi-thread"] }
+toml = "0.8.19"
