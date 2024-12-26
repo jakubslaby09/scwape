@@ -1,0 +1,10 @@
+[package]
+name = "scrape"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+html2md = "0.2.14"
+reqwest = "0.12.9"
+scraper = "0.22.0"
+tokio = { version = "1.42.0", features = ["macros", "fs", "rt-multi-thread"] }
