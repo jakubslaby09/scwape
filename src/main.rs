@@ -1,8 +1,10 @@
 mod sitemap;
-use sitemap::scrape_menus;
+use crawler::crawl_site;
 
 mod config;
 use config::Config;
+
+mod crawler;
 
 use std::{path::PathBuf, process::exit};
 use clap::Parser;
@@ -10,7 +12,7 @@ use reqwest::Client;
 use tokio::fs;
 
 #[derive(clap::Parser)]
-struct Args {
+pub struct Args {
     /// Path to the TOML config
     #[arg(short, long, default_value = "./scrape.toml")]
     config: PathBuf,
@@ -18,6 +20,14 @@ struct Args {
     /// Create a default config file
     #[arg(short, long, default_value = "false", action)]
     init: bool,
+    
+    /// Don't write any pages
+    #[arg(long, default_value = "false", action)]
+    dry_run: bool,
+    
+    /// Target directory for pages
+    #[arg(short, long, default_value = "./")]
+    target: PathBuf,
 }
 
 #[tokio::main]
@@ -56,19 +66,6 @@ async fn main() {
 
     let client = Client::new();
     let config = toml::from_str(&config_file).unwrap();
-    scrape_site(&config, &client).await;
-}
 
-async fn scrape_site(config: &Config, client: &Client) {
-    let res = client.get("https://gvh.cz")
-    .send().await.expect("couldn't connect to site")
-    .text().await.expect("couldn't download home page");
-    
-    scrape_page(&res, &config);
-}
-
-fn scrape_page(page: &str, config: &Config) {
-    let dom = scraper::Html::parse_document(page);
-
-    scrape_menus(&dom, config, None, 0);
+    crawl_site(&config, &client, &args).await;
 }
