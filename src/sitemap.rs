@@ -8,6 +8,7 @@ use crate::{config::DEFAULT_ARCHETYPE, Config};
 #[derive(Debug)]
 pub struct Sitemap {
     pub home: Page,
+    // pub unsorted: Vec<Page>,
 }
 
 impl Sitemap {
@@ -20,6 +21,7 @@ impl Sitemap {
                 children: vec![],
                 contents: None,
             },
+            // unsorted: vec![],
         }
     }
 }
@@ -31,23 +33,6 @@ pub struct Page {
     pub url: Url,
     pub children: Vec<Page>,
     contents: Option<PageContents>,
-}
-
-impl PartialEq for Page {
-    fn eq(&self, other: &Self) -> bool {
-        self.url == other.url
-    }
-}
-
-impl std::fmt::Debug for Page {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Page")
-        .field("name", &self.title)
-        .field("url", &self.url.to_string())
-        .field("children", &self.children)
-        // .field("md", &self.construct_md(DEFAULT_ARCHETYPE).unwrap_or_default())
-        .finish_non_exhaustive()
-    }
 }
 
 impl Page {
@@ -63,12 +48,21 @@ impl Page {
     pub fn contents(&self) -> Option<&PageContents> {
         self.contents.as_ref()
     }
-    fn push(&mut self, child_page: Page) -> bool {
-        if self.children.contains(&child_page) {
-            return false;
+    fn find(&self, url: &Url) -> Option<&Page> {
+        if self.url == *url {
+            Some(&self)
+        } else {
+            self.children.iter().find_map(|child| child.find(url))
         }
-        self.children.push(child_page);
-        true
+    }
+    fn push(&mut self, child_page: Page) -> bool {
+        if let Some(existing) = self.find(&child_page.url) {
+            // return Err(existing);
+            false
+        } else {
+            self.children.push(child_page);
+            true
+        }
     }
     pub fn push_new(&mut self, name: String, url: Url, slug_name: Option<&str>) -> Option<&mut Self> {
         let slug_name = match slug_name {
@@ -106,6 +100,18 @@ impl Page {
         } else {
             PathBuf::from(&self.slug).join("_index.md")
         }
+    }
+}
+
+impl std::fmt::Debug for Page {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Page")
+        .field("name", &self.title)
+        .field("url", &self.url.to_string())
+        .field("slug", &self.slug)
+        .field("children", &self.children)
+        // .field("md", &self.construct_md(DEFAULT_ARCHETYPE).unwrap_or_default())
+        .finish_non_exhaustive()
     }
 }
 
