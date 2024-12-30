@@ -65,6 +65,7 @@ async fn main() {
     };
 
     let client = Client::new();
+    // TODO: a proper error message
     let config = toml::from_str(&config_file).unwrap();
 
     crawl_site(&config, &client, &args).await;
