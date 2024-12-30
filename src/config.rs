@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use scraper::Selector;
 use serde::{Deserialize, Serialize};
@@ -14,6 +14,7 @@ title = {TITLE}
 "#;
 // TODO: add to config
 pub const MAX_CRAWLER_DEPTH: usize = 10;
+pub const REQUEST_ATTEMPT_SLEEP: Duration = Duration::from_secs(5);
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {

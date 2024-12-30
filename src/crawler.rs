@@ -1,9 +1,9 @@
-use std::path::Path;
+use std::{path::Path, process::exit};
 
 use reqwest::{Client, Url};
-use tokio::fs;
+use tokio::{fs, time::sleep};
 
-use crate::{config::{Config, DEFAULT_ARCHETYPE, MAX_CRAWLER_DEPTH}, sitemap::{scrape_menus, Page, PageContents, Sitemap}, Args};
+use crate::{config::{Config, DEFAULT_ARCHETYPE, MAX_CRAWLER_DEPTH, REQUEST_ATTEMPT_SLEEP}, sitemap::{scrape_menus, Page, PageContents, Sitemap}, Args};
 
 pub async fn crawl_site(config: &Config, client: &Client, args: &Args) {
     // TODO: print a prettier error message
@@ -16,16 +16,24 @@ pub async fn crawl_site(config: &Config, client: &Client, args: &Args) {
 async fn crawl_page(page: &mut Page, unsorted: Option<&mut Vec<Page>>, client: &Client, config: &Config, args: &Args, depth: usize) {
     let indent = " ".repeat(depth);
     let file = args.target.join(page.path());
-    if let Some(_) = unsorted {
-        eprintln!("{indent}> crawling {}: {}", file.to_string_lossy(), page.url.path());
+    if unsorted.is_some() {
+        if depth >= MAX_CRAWLER_DEPTH {
+            eprintln!("{indent}- crawling {}: {}", file.to_string_lossy(), page.url.path());
+        } else {
+            eprintln!("{indent}> crawling {}: {}", file.to_string_lossy(), page.url.path());
+        }
     } else {
         eprintln!("{indent}> downloading {}: {}", file.to_string_lossy(), page.url.path());
     }
 
-    let res = client.get(page.url.clone())
-    .send().await.expect("couldn't connect to site")
-    .error_for_status().expect("bad status while downloading page")
-    .text().await.expect("couldn't download home page");
+    let res = match download_page(client, &*page, 5, &indent).await {
+        Ok(it) => it,
+        Err(true) => return,
+        Err(false) => {
+            eprintln!("exiting due to network error");
+            exit(30);
+        }
+    };
 
     let dom = scraper::Html::parse_document(&res);
     if depth == 0 {
@@ -103,4 +111,41 @@ fn scrape_contents(config: &Config, page: &mut Page, dom: &scraper::Html, indent
         page_contents.push_param(param_name.clone(), param_value);
     }
     page.add_contents(page_contents);
+}
+
+async fn download_page(client: &Client, page: &Page, retries: usize, indent: &str) -> Result<String, bool> {
+    for attempt in 1..=retries {
+        if attempt != 1 {
+            sleep(REQUEST_ATTEMPT_SLEEP).await;
+        }
+        let res = match client.get(page.url.clone()).send().await {
+            Ok(it) => it,
+            Err(err) => {
+                eprintln!("{indent}! couldn't connect to site on attempt {attempt}/{retries}: {err}");
+                continue;
+            },
+        };
+        if let Err(err) = res.error_for_status_ref() {
+            if !err.status().unwrap_or_default().is_client_error() {
+                eprintln!("{indent}! received status code {}, skipping page", err.status().unwrap_or_default());
+                return Err(true);
+            }
+            eprintln!("{indent}! received status code {} on attempt {attempt}/{retries}", err.status().unwrap_or_default());
+            continue;
+        };
+        match res.text().await {
+            Ok(it) => {
+                if attempt != 1 {
+                    eprintln!("{indent}✓ downloading succeeded on attempt {attempt}/{retries}")
+                }
+                return Ok(it);
+            },
+            Err(err) => {
+                eprintln!("{indent}! couldn't download page on attempt {attempt}/{retries}: {err}");
+                continue;
+            },
+        }
+    };
+    eprintln!("{indent}! failed to download {}, maximum attempts reached", page.url);
+    Err(false)
 }
