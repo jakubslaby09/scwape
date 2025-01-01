@@ -32,7 +32,7 @@ pub struct Page {
     pub slug: PathBuf,
     pub url: Url,
     pub children: Vec<Page>,
-    contents: Option<PageContents>,
+    pub contents: Option<PageContents>,
 }
 
 impl Page {
@@ -133,6 +133,9 @@ impl PageContents {
     pub fn push_param(&mut self, name: String, value: String) {
         debug_assert!(!self.params.contains_key(&name), "param already set");
         self.params.insert(name, value);
+    }
+    pub fn is_empty(&self) -> bool {
+        self.text.is_empty()
     }
 }
 

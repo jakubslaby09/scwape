@@ -41,7 +41,7 @@ async fn crawl_page(page: &mut Page, unsorted: Option<&mut Vec<Page>>, client: &
     }
 
     scrape_contents(config, page, &dom, &indent);
-    if !args.dry_run {
+    if (unsorted.is_none() || !page.contents.as_ref().unwrap().is_empty()) && !args.dry_run {
         if let Some(dir) = file.parent() {
             // eprintln!("{indent}  making dir {}", dir.to_string_lossy());
             fs::create_dir_all(dir).await.unwrap();
