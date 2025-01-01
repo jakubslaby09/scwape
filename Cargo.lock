@@ -1404,20 +1404,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
-name = "scrape"
-version = "1.0.0"
-dependencies = [
- "clap",
- "cssparser",
- "html2md",
- "reqwest",
- "scraper",
- "serde",
- "tokio",
- "toml",
-]
-
-[[package]]
 name = "scraper"
 version = "0.22.0"
 source = "git+https://github.com/jakubslaby09/scraper.git?rev=6c64fb9#6c64fb94905e74a388258578dba281ae0d89127d"
@@ -1430,6 +1416,20 @@ dependencies = [
  "selectors",
  "serde",
  "tendril",
+]
+
+[[package]]
+name = "scwape"
+version = "1.0.0"
+dependencies = [
+ "clap",
+ "cssparser",
+ "html2md",
+ "reqwest",
+ "scraper",
+ "serde",
+ "tokio",
+ "toml",
 ]
 
 [[package]]
