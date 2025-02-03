@@ -1406,7 +1406,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 [[package]]
 name = "scraper"
 version = "0.22.0"
-source = "git+https://github.com/jakubslaby09/scraper.git?rev=6c64fb9#6c64fb94905e74a388258578dba281ae0d89127d"
+source = "git+https://github.com/rust-scraper/scraper.git?rev=1a55337#1a5533780655eeecca4c7c6e37ea146390c86ae8"
 dependencies = [
  "cssparser",
  "ego-tree",
