@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_ARCHETYPE: &str =
 r#"+++
-title = {TITLE}
+title = "{TITLE}"
 {PARAMS}
 +++
 
