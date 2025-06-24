@@ -15,6 +15,7 @@ pub struct Config {
     pub param_selectors: HashMap<String, Selector>,
 
     // Output
+    #[serde(default)]
     pub params_format: ParamsFormat,
     pub archetype: Option<String>,
 
@@ -51,6 +52,12 @@ pub enum ParamsFormat {
     Toml,
     Yaml,
     Json,
+}
+
+impl Default for ParamsFormat {
+    fn default() -> Self {
+        ParamsFormat::Toml
+    }
 }
 
 pub const fn default_archetype(format: &ParamsFormat) -> &'static str {
