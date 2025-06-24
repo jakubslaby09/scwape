@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::{Path, PathBuf}};
 use reqwest::Url;
 use scraper::{selectable::Selectable, ElementRef, Selector};
 
-use crate::{config::MAX_CRAWLER_DEPTH, Config};
+use crate::{config::ParamsFormat, Config};
 
 #[derive(Debug)]
 pub struct Sitemap {
@@ -86,11 +86,24 @@ impl Page {
 
         self.contents = Some(contents);
     }
-    pub fn construct_md(&self, archetype: &str) -> Option<String> {
-        let params: String = self.contents()?.params.iter()
+    pub fn construct_md(&self, archetype: &str, format: &ParamsFormat) -> Option<String> {
+        let params: String = match format {
+            ParamsFormat::Toml => "",
+            ParamsFormat::Yaml => "",
+            ParamsFormat::Json => ",\n",
+        }.to_string() + &self.contents()?.params.iter()
         // TODO: escape toml
-        .map(|(name, value)| format!("{name}: \"{value}\"\n"))
-        .collect();
+        .map(
+            |(name, value)| match format {
+                ParamsFormat::Toml => format!("{name} = '{value}'"),
+                ParamsFormat::Yaml => format!("{name}: \"{value}\""),
+                ParamsFormat::Json => format!("    \"{name}\": \"{value}\""),
+            })
+        .collect::<Vec<String>>().join(match format {
+            ParamsFormat::Toml |
+            ParamsFormat::Yaml => "\n",
+            ParamsFormat::Json => ",\n",
+        });
         Some(archetype
         .replace("{PARAMS}", &params)
         .replace("{TITLE}", &self.title)
@@ -169,7 +182,7 @@ pub fn scrape_menus<'s>(node: impl Selectable<'s> + Copy, page: &mut Page, confi
             },
         };
         eprintln!("{indent}- {}: {}", child_page.title, child_page.url);
-        if depth >= MAX_CRAWLER_DEPTH {
+        if depth >= config.crawler_depth {
             return;
         }
         if let Some(child_page) = page.push(child_page) {

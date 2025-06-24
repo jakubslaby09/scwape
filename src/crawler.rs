@@ -1,9 +1,9 @@
-use std::{path::Path, process::exit};
+use std::{path::Path, process::exit, time::Duration};
 
 use reqwest::{Client, Url};
 use tokio::{fs, time::sleep};
 
-use crate::{config::{Config, DEFAULT_ARCHETYPE, MAX_CRAWLER_DEPTH, REQUEST_ATTEMPT_SLEEP}, sitemap::{scrape_menus, Page, PageContents, Sitemap}, Args};
+use crate::{config::{default_archetype, Config}, sitemap::{scrape_menus, Page, PageContents, Sitemap}, Args};
 
 pub async fn crawl_site(config: &Config, client: &Client, args: &Args) {
     // TODO: print a prettier error message
@@ -17,7 +17,7 @@ async fn crawl_page(page: &mut Page, unsorted: Option<&mut Vec<Page>>, client: &
     let indent = " ".repeat(depth);
     let file = args.target.join(page.path());
     if unsorted.is_some() {
-        if depth >= MAX_CRAWLER_DEPTH {
+        if depth >= config.crawler_depth {
             eprintln!("{indent}- crawling {}: {}", file.to_string_lossy(), page.url.path());
         } else {
             eprintln!("{indent}> crawling {}: {}", file.to_string_lossy(), page.url.path());
@@ -26,7 +26,7 @@ async fn crawl_page(page: &mut Page, unsorted: Option<&mut Vec<Page>>, client: &
         eprintln!("{indent}> downloading {}: {}", file.to_string_lossy(), page.url.path());
     }
 
-    let res = match download_page(client, &*page, 5, &indent).await {
+    let res = match download_page(client, config, page, &indent).await {
         Ok(it) => it,
         Err(true) => return,
         Err(false) => {
@@ -46,12 +46,16 @@ async fn crawl_page(page: &mut Page, unsorted: Option<&mut Vec<Page>>, client: &
             // eprintln!("{indent}  making dir {}", dir.to_string_lossy());
             fs::create_dir_all(dir).await.unwrap();
         }
-        let text = page.construct_md(config.archetype.as_ref().map(|a| a.as_str()).unwrap_or(DEFAULT_ARCHETYPE));
+        let archetype = match &config.archetype {
+            Some(it) => it.as_str(),
+            None => default_archetype(&config.params_format),
+        };
+        let text = page.construct_md(archetype, &config.params_format);
         fs::write(&file, text.unwrap()).await.unwrap();
         // eprintln!("{indent}  scraped {} into {}", page.url.path(), file.to_string_lossy());
     }
     
-    if depth >= MAX_CRAWLER_DEPTH {
+    if depth >= config.crawler_depth {
         // eprintln!("{indent}! reached max crawler depth: {depth}");
         return;
     }
@@ -113,15 +117,16 @@ fn scrape_contents(config: &Config, page: &mut Page, dom: &scraper::Html, indent
     page.add_contents(page_contents);
 }
 
-async fn download_page(client: &Client, page: &Page, retries: usize, indent: &str) -> Result<String, bool> {
-    for attempt in 1..=retries {
+async fn download_page(client: &Client, config: &Config, page: &Page, indent: &str) -> Result<String, bool> {
+    let attempts = config.request_attempts;
+    for attempt in 1..=attempts {
         if attempt != 1 {
-            sleep(REQUEST_ATTEMPT_SLEEP).await;
+            sleep(Duration::from_secs(config.request_attempt_seconds)).await;
         }
         let res = match client.get(page.url.clone()).send().await {
             Ok(it) => it,
             Err(err) => {
-                eprintln!("{indent}! couldn't connect to site on attempt {attempt}/{retries}: {err}");
+                eprintln!("{indent}! couldn't connect to site on attempt {attempt}/{attempts}: {err}");
                 continue;
             },
         };
@@ -130,18 +135,18 @@ async fn download_page(client: &Client, page: &Page, retries: usize, indent: &st
                 eprintln!("{indent}! received status code {}, skipping page", err.status().unwrap_or_default());
                 return Err(true);
             }
-            eprintln!("{indent}! received status code {} on attempt {attempt}/{retries}", err.status().unwrap_or_default());
+            eprintln!("{indent}! received status code {} on attempt {attempt}/{attempts}", err.status().unwrap_or_default());
             continue;
         };
         match res.text().await {
             Ok(it) => {
                 if attempt != 1 {
-                    eprintln!("{indent}✓ downloading succeeded on attempt {attempt}/{retries}")
+                    eprintln!("{indent}✓ downloading succeeded on attempt {attempt}/{attempts}")
                 }
                 return Ok(it);
             },
             Err(err) => {
-                eprintln!("{indent}! couldn't download page on attempt {attempt}/{retries}: {err}");
+                eprintln!("{indent}! couldn't download page on attempt {attempt}/{attempts}: {err}");
                 continue;
             },
         }
