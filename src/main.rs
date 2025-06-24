@@ -65,8 +65,13 @@ async fn main() {
     };
 
     let client = Client::new();
-    // TODO: a proper error message
-    let config = toml::from_str(&config_file).unwrap();
+    let config = match toml::from_str(&config_file) {
+        Ok(it) => it,
+        Err(err) => {
+            eprintln!("Couldn't parse config file {}: {err}", args.config.to_string_lossy());
+            exit(30)
+        },
+    };
 
     crawl_site(&config, &client, &args).await;
 }
