@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::{Path, PathBuf}};
+use std::{collections::HashMap, iter, path::{Path, PathBuf}};
 
 use reqwest::Url;
 use scraper::{selectable::Selectable, ElementRef, Selector};
@@ -132,15 +132,15 @@ impl std::fmt::Debug for Page {
 
 #[derive(Clone)]
 pub struct PageContents {
-    params: HashMap<String, String>,
     text: String,
+    params: HashMap<String, String>,
 }
 
 impl PageContents {
-    pub fn from_text(text: String) -> Self {
+    pub fn new(text: String) -> Self {
         Self {
-            params: HashMap::new(),
             text,
+            params: HashMap::new(),
         }
     }
     pub fn push_param(&mut self, name: String, value: String) {

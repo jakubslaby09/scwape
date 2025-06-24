@@ -98,8 +98,16 @@ fn scrape_contents(config: &Config, page: &mut Page, dom: &scraper::Html, indent
     if page_text.is_empty() {
         eprintln!("{indent}! no content found: {}", page.title);
     }
+
+    let page_date = config.date_selector.as_ref()
+        .and_then(|it| dom.select(&it).next())
+        .and_then(|it| it.attr("datetime"))
+        .map(|it| it.to_string());
     
-    let mut page_contents = PageContents::from_text(page_text);
+    let mut page_contents = PageContents::new(page_text);
+    if let Some(page_date) = page_date {
+        page_contents.push_param("date".to_string(), page_date);
+    }
     for (param_name, param_selector) in &config.param_selectors {
         let mut param_content = dom.select(param_selector);
         let param_element = if let Some(first) = param_content.next() {

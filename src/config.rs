@@ -12,6 +12,7 @@ pub struct Config {
     pub menu_anchor_selector: Selector,
     pub submenu_selector: Option<Selector>,
     pub content_selector: Selector,
+    pub date_selector: Option<Selector>,
     pub param_selectors: HashMap<String, Selector>,
 
     // Output
@@ -33,6 +34,7 @@ impl Default for Config {
         Config {
             url: "https://gvh.cz".to_string(),
             anchor_selector: Selector::parse("a[href]").unwrap(),
+            date_selector: Some(Selector::parse("article > header.entry-header > time[datetime]").unwrap()),
             menu_selector: Selector::parse(".mega-menu > .mega-menu-item").unwrap(),
             menu_anchor_selector: Selector::parse(":scope > .mega-menu-link").unwrap(),
             submenu_selector: Some(Selector::parse(":scope > .mega-sub-menu > .mega-menu-item").unwrap()),
