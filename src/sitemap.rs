@@ -156,6 +156,7 @@ pub fn slug_from_title(title: &str) -> PathBuf {
     title.to_lowercase()
     .replace(" - ", "-")
     .replace(" – ", "-")
+    .replace("?", "")
     .replace(" ", "-").into()
 }
 
